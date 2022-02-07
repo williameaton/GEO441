@@ -4,46 +4,81 @@ from initial_conditions import set_IC
 
 
 class vel_stress_form():
-    def __init__(self, model, BC_left, BC_right, IC_func):
-        u_init, V_init, T_init, zeros = IC_func(model.x)
+    def __init__(self, model, BC_left, BC_right, IC_func, plot):
 
+        # Boundary conditions
+        self.m = model
+        self.IC_func = IC_func
+        self.BC_left = BC_left
+        self.BC_right = BC_right
+
+        # Model parameters
         self.dt = model.dt
         self.dx = model.dx
         self.K = model.K
         self.rho = model.rho
 
+        # Setup initial conditions
         self.T = np.zeros((3, model.dim))
-        self.T[:2,:] = T_init
-
         self.v = np.zeros((3, model.dim))
-        self.v[:2,:] = V_init
+        self.set_initial_conditions()
 
-        self.m = model
-        self.IC_func = IC_func
+        # What to plot:
+        self.plot_type = plot
+
 
 
     def march(self):
 
-        # If left boundary = neumann
-        self.T[:,0]=0
-        self.T[:,-1]=0
+        if self.BC_left == "neumann":
+            self.T[:,0]=0
+            for i in range(0, len(self.v[0,:])-1):
+                self.step_v(i, i)
+                self.step_T(i, i+1)
 
-        for i in range(1, len(self.v[0,:])-2):
-            self.v[2, i] = (self.dt / (self.rho[i] * self.dx)) * (self.T[1, i + 1] - self.T[1, i - 1]) + self.v[0, i]
-            j = i + 1
-            self.T[2, j] = (self.K[j] * self.dt / self.dx) * (self.v[1, j + 1] - self.v[1, j - 1]) + self.T[0, j]
+        elif self.BC_left == "dirichlet":
+            self.v[:, 0] = 0
+            for i in range(0, len(self.T[0, :]) - 1):
+                self.step_T(i, i)
+                self.step_v(i, i+1)
+        else:
+            raise ValueError("BC type not supported")
 
-        # If left is dirichlet I think you want it the other way around with T first and then v
+
+        # Right Boundary condition:
+        if self.BC_right == "neumann":
+            self.T[:,-1] = 0
+        else:
+            self.v[:,-1] = 0
+
 
         # Update data arrays
         # Roll back arrays so that U[1,:] --> U[0,:] and U[2,:] --> U[1,:]
         self.v = np.roll(self.v, shift=-1, axis=0)
         self.T = np.roll(self.T, shift=-1, axis=0)
 
+        # Update plotter - i.e. ensure plotter has correct data:
+        self.plot = self.set_plot_type(self.plot_type)
 
 
     def set_initial_conditions(self):
-        # In case we want to reset to the initial conditions
+        # In case we want to reset to the initial conditions - i.e for init() in animation
         U, V, T, zeros = self.IC_func(self.m.x)
         self.T[:2, :] = T
         self.v[:2, :] = V
+
+
+
+    def step_v(self, k, l):
+        self.v[2, l] = (self.dt / (self.rho[k] * self.dx)) * (self.T[1, k + 1] - self.T[1, k]) + self.v[0, l]
+
+    def step_T(self, k,l):
+        self.T[2, l] = (self.K[k] * self.dt / self.dx) * (self.v[1, k+1] - self.v[1, k]) + self.T[0, l]
+
+    def set_plot_type(self, plot):
+        if plot == "v":
+            return self.v
+        elif plot == "T":
+            return self.T
+        else:
+            raise ValueError("Must be v or T")

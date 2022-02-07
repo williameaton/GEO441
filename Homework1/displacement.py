@@ -24,9 +24,11 @@ class displacement_form():
         self.BCleft = self.bcs[BC_left]
         self.BCright = self.bcs[BC_right]
 
-
         # Calculate prefactor for marching eqn:
         self.prefactor = (m.c * m.dt / m.dx)**2
+
+        self.plot = self.u
+
 
     def march(self):
         # Enforce boundary conditions:
@@ -39,6 +41,8 @@ class displacement_form():
         # Roll back arrays so that U[1,:] --> U[0,:] and U[2,:] --> U[1,:]
         self.u = np.roll(self.u, shift=-1, axis=0)
 
+        # Can only plot u here so:
+        self.plot = self.u
 
     def set_initial_conditions(self):
         # In case we want to reset to the initial conditions
@@ -53,7 +57,6 @@ class displacement_form():
         self.BCleft(0)
         self.BCright(-1)
 
-
-
     def dirichlet(self, index):
         self.u[1, index] = 0
+
