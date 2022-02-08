@@ -1,11 +1,12 @@
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import numpy as np
-def propagate(waves, m):
-    # This whole function basically animates the plot by marching through timesteps 
+def propagate(waves, m, fig_title=""):
+    # This whole function basically animates the plot by marching through timesteps
 
     # Create figure
     fig, ax = plt.subplots()
+    fig.suptitle(fig_title)
     ax.set_ylim(-1, 1)
     lines = []
 

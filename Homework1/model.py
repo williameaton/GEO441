@@ -1,7 +1,7 @@
 import numpy as np
 
 class Model():
-
+    # Class holds some model parameters that are useful
     def __init__(self, x, dx, c, K, Nt, rho):
         self.x = x                       # X-axis array
         self.dx = x[1] - x[0]            # X grid spacing - assumed to be constant

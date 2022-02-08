@@ -3,44 +3,42 @@ import numpy as np
 
 
 class displacement_form():
-
     def __init__(self, m, BC_left, BC_right, label):
-
         # Boundary conditions:
         self.BC_left = BC_left
         self.BC_right = BC_right
 
-        # Set initial conditions:
+        # Initialise arrays and apply initial conditions:
         self.m      = m
         self.T = np.zeros((3, m.dim))
         self.v = np.zeros((3, m.dim))
         self.u = np.zeros((3, m.dim))
         self.set_initial_conditions()
 
-
         # Calculate prefactor for marching eqn:
-        self.prefactor = (m.c * m.dt / m.dx)**2
+        #self.prefactor = (m.c * m.dt / m.dx)**2
+        self.prefactor = (((self.m.dt/self.m.dx)**2)/self.m.rho)
 
+        # Stuff for plotting
         self.plot = self.u
         self.label = label
 
 
     def march(self):
+        # Function marches one timestep
+
         # Calculate newest timestep
         for i in range(1, len(self.u[1,:]) - 1):
-            self.u[2, i] = self.prefactor[i]*(self.u[1, i + 1] - 2 * self.u[1, i] + self.u[1, i - 1]) + 2 * self.u[1, i] - self.u[0, i]
+            # The full inhomogenous equation is quite long so I split it here into two parts:
+            homo = self.prefactor[i]*self.m.K[i]*(self.u[1, i + 1] - 2*self.u[1, i] + self.u[1, i - 1]) + 2*self.u[1, i] - self.u[0, i]
 
+            # Inhomo = 0 unless there are gradients in kappa (only true at the one discontinuity
+            inhomo = 0.25*self.prefactor[i]*(self.u[1, i + 1] - self.u[1, i - 1])*(self.m.K[i+1] - self.m.K[i-1])
+            self.u[2, i] =  homo + inhomo
 
-        if self.BC_left == "dirichlet":
-            self.u[:,0] = 0
-        else:
-            self.u[:, 0] = self.u[:, 1]
-
-        if self.BC_right == "dirichlet":
-            self.u[:,-1] = 0
-        else:
-            self.u[:, -1] = self.u[:, -2]
-
+        # Apply Boundary conditions:
+        self.apply_BC_left()
+        self.apply_BC_right()
 
         # Roll back arrays so that U[1,:] --> U[0,:] and U[2,:] --> U[1,:]
         self.u = np.roll(self.u, shift=-1, axis=0)
@@ -52,11 +50,12 @@ class displacement_form():
 
 
     def set_initial_conditions(self):
-        # In case we want to reset to the initial conditions - i.e for init() in animation
+        # Calculate and apply initial conditions
         U, V, T = self.IC_func()
         self.u[:2, :] = U
         self.T[:2, :] = T
         self.v[:2, :] = V
+
 
 
     def IC_func(self):
@@ -82,3 +81,18 @@ class displacement_form():
 
         return u, v, T
 
+
+    def apply_BC_left(self):
+        # Apply left boundary condition
+        if self.BC_left == "dirichlet":
+            self.u[:,0] = 0
+        else:
+            self.u[:, 0] = self.u[:, 1]
+
+
+    def apply_BC_right(self):
+        # Apply right boundary condition
+        if self.BC_right == "dirichlet":
+            self.u[:, -1] = 0
+        else:
+            self.u[:, -1] = self.u[:, -2]
