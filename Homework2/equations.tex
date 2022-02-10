@@ -1,0 +1,82 @@
+\documentclass{article}
+
+\usepackage[english]{babel}
+\usepackage{amsmath}
+\setlength{\parindent}{0em}
+\setlength{\parskip}{2em}
+
+% Set page size and margins
+% Replace `letterpaper' with`a4paper' for UK/EU standard size
+\usepackage[letterpaper,top=1cm,bottom=3cm,left=1cm,right=1cm]{geometry}
+
+% Useful packages
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+
+\title{GEO441: Problem Set 2}
+\author{Will Eaton}
+
+\begin{document}
+\maketitle
+
+\section{Tsunami equations}
+
+\[\partial_t^2 P = \partial_x v^2 \partial_x P + \partial_y v^2 \partial_y P + v^2(\partial_x^2P + \partial_y^2P)\]
+
+\subsection{2\textsuperscript{nd} order time, 2\textsuperscript{nd} order space}
+\[\partial_t^2 P \approx \frac{P_{i,j}^{t+1} - 2P_{i,j}^{t} + P_{i,j}^{t-1}}{(\Delta t)^2}\]
+Using a centred approximation for the first order terms: 
+\[ \partial_x P \approx \frac{P_{i+1,j}^{t} - P_{i-1,j}^{t}}{2\Delta x}\]
+Overall we then get: 
+\begin{multline*}
+\frac{P_{i,j}^{t+1} - 2P_{i,j}^{t} + P_{i,j}^{t-1}}{(\Delta t)^2} = \frac{(P_{i+1,j}^{t} - P_{i-1,j}^{t})({v_{i+1,j}^{t}}^2 - {v_{i-1,j}^{t}}^2)}{4(\Delta x)^2} + \frac{(P_{i,j+1}^{t} - P_{i,j-1}^{t})({v_{i,j+1}^{t}}^2 - {v_{i,j-1}^{t}}^2)}{4(\Delta y)^2} \\
++ {v_{i,j}^{t}}^2\Bigg( \frac{P_{i+1,j}^{t} - 2P_{i,j}^{t} + P_{i-1,j}^{t}}{(\Delta x)^2} + \frac{P_{i,j+1}^{t} - 2P_{i,j}^{t} + P_{i,j-1}^{t}}{(\Delta y)^2} \Bigg)
+\end{multline*}
+
+Hence rearranging for the next timestep in P we get 
+\begin{multline*}
+P_{i,j}^{t+1} = (\Delta t)^2\Bigg[\frac{(P_{i+1,j}^{t} - P_{i-1,j}^{t})({v_{i+1,j}^{t}}^2 - {v_{i-1,j}^{t}}^2)}{4(\Delta x)^2} + \frac{(P_{i,j+1}^{t} - P_{i,j-1}^{t})({v_{i,j+1}^{t}}^2 - {v_{i,j-1}^{t}}^2)}{4(\Delta y)^2} \\
++ {v_{i,j}^{t}}^2\Big( \frac{P_{i+1,j}^{t} - 2P_{i,j}^{t} + P_{i-1,j}^{t}}{(\Delta x)^2} + \frac{P_{i,j+1}^{t} - 2P_{i,j}^{t} + P_{i,j-1}^{t}}{(\Delta y)^2} \Big) \Bigg] + 2P_{i,j}^{t} - P_{i,j}^{t-1}
+\end{multline*}
+
+Where the homogenous case is 
+\begin{multline*}
+P_{i,j}^{t+1} = (\Delta t)^2{v_{i,j}^{t}}^2\Big( \frac{P_{i+1,j}^{t} - 2P_{i,j}^{t} + P_{i-1,j}^{t}}{(\Delta x)^2} + \frac{P_{i,j+1}^{t} - 2P_{i,j}^{t} + P_{i,j-1}^{t}}{(\Delta y)^2} \Big)  + 2P_{i,j}^{t} - P_{i,j}^{t-1}
+\end{multline*}
+
+
+\subsection{2\textsuperscript{nd} order time, 4\textsuperscript{th} order space} \label{2nd4th}
+
+\[\partial_t^2 P \approx \frac{P_{i,j}^{t+1} - 2P_{i,j}^{t} + P_{i,j}^{t-1}}{(\Delta t)^2}\]
+\[\partial_x v^2 \partial_x P \approx \frac{-P_{i+2,j}^{t} + 8P_{i+1,j}^{t} -8P_{i-1,j}^{t} + P_{i-2,j}^{t} }{12\Delta x} \frac{-{v_{i+2,j}^{t}}^2 + 8{v_{i+1,j}^{t}}^2 -8{v_{i-1,j}^{t}}^2 + {v_{i-2,j}^{t}}^2 }{12\Delta x}\]
+
+ 
+\[v^2(\partial_x^2P + \partial_y^2P) &\approx {v_{i,j}^{t}}^2 \Big[\frac{-P_{i+2,j}^{t} + 16P_{i+1,j}^{t} -30P_{i,j}^{t} +16P_{i-1,j}^{t} - P_{i-2,j}^{t} }{12(\Delta x)^2} + \frac{-P_{i,j+2}^{t} + 16P_{i,j+1}^{t} -30P_{i,j}^{t} + 16P_{i,j-1}^{t} - P_{i,j-2}^{t} }{12(\Delta y)^2}\Big]  \]
+
+So putting it all together we get
+
+\begin{multline*}
+\frac{P_{i,j}^{t+1} - 2P_{i,j}^{t} + P_{i,j}^{t-1}}{(\Delta t)^2} = \frac{(-P_{i+2,j}^{t} + 8P_{i+1,j}^{t} -8P_{i-1,j}^{t} + P_{i-2,j}^{t}) (-{v_{i+2,j}^{t}}^2 + 8{v_{i+1,j}^{t}}^2 -8{v_{i-1,j}^{t}}^2 + {v_{i-2,j}^{t}}^2 ) }{144 (\Delta x)^2} \\
++ \frac{(-P_{i,j+2}^{t} + 8P_{i,j+1}^{t} -8P_{i,j-1}^{t} + P_{i,j-2}^{t}) (-{v_{i,j+2}^{t}}^2 + 8{v_{i,j+1}^{t}}^2 -8{v_{i,j-1}^{t}}^2 + {v_{i,j-2}^{t}}^2 ) }{144 (\Delta y)^2} \\
++ {v_{i,j}^{t}}^2 \Big[\frac{-P_{i+2,j}^{t} + 16P_{i+1,j}^{t} -30P_{i,j}^{t} +16P_{i-1,j}^{t} - P_{i-2,j}^{t} }{12(\Delta x)^2} \\
++ \frac{-P_{i,j+2}^{t} + 16P_{i,j+1}^{t} -30P_{i,j}^{t} + 16P_{i,j-1}^{t} - P_{i,j-2}^{t} }{12(\Delta y)^2}\Big]
+\end{multline*}
+
+So then if we rearrange for the next timestep in P we have 
+\begin{multline*}
+P_{i,j}^{t+1} = (\Delta t)^2\Bigg[ \frac{(-P_{i+2,j}^{t} + 8P_{i+1,j}^{t} -8P_{i-1,j}^{t} + P_{i-2,j}^{t}) (-{v_{i+2,j}^{t}}^2 + 8{v_{i+1,j}^{t}}^2 -8{v_{i-1,j}^{t}}^2 + {v_{i-2,j}^{t}}^2 ) }{144 (\Delta x)^2} \\
++ \frac{(-P_{i,j+2}^{t} + 8P_{i,j+1}^{t} -8P_{i,j-1}^{t} + P_{i,j-2}^{t}) (-{v_{i,j+2}^{t}}^2 + 8{v_{i,j+1}^{t}}^2 -8{v_{i,j-1}^{t}}^2 + {v_{i,j-2}^{t}}^2 ) }{144 (\Delta y)^2} \\
++ {v_{i,j}^{t}}^2 \Big[\frac{-P_{i+2,j}^{t} + 16P_{i+1,j}^{t} -30P_{i,j}^{t} +16P_{i-1,j}^{t} - P_{i-2,j}^{t} }{12(\Delta x)^2} \\
++ \frac{-P_{i,j+2}^{t} + 16P_{i,j+1}^{t} -30P_{i,j}^{t} + 16P_{i,j-1}^{t} - P_{i,j-2}^{t} }{12(\Delta y)^2}\Big] \Bigg] + 2P_{i,j}^{t} - P_{i,j}^{t-1}
+\end{multline*}
+
+Note that in the homogenous case there are no changes in velocity spatially such that the first two terms on the RHS go to 0 and we get 
+
+\begin{multline*}
+P_{i,j}^{t+1} = (\Delta t)^2 {v_{i,j}^{t}}^2 \Big[\frac{-P_{i+2,j}^{t} + 16P_{i+1,j}^{t} -30P_{i,j}^{t} +16P_{i-1,j}^{t} - P_{i-2,j}^{t} }{12(\Delta x)^2} \\
++ \frac{-P_{i,j+2}^{t} + 16P_{i,j+1}^{t} -30P_{i,j}^{t} + 16P_{i,j-1}^{t} - P_{i,j-2}^{t} }{12(\Delta y)^2}\Big] + 2P_{i,j}^{t} - P_{i,j}^{t-1}
+\end{multline*}
+
+
+\end{document}
