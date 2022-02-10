@@ -1,0 +1,16 @@
+----------------------------------
+Program: class_tsunami.c
+----------------------------------
+
+COMPILE:
+  gcc -o class_tsunami class_tsunami.c -lm
+
+RUN:
+  ./class_tsunami
+
+----------------------------------
+Program: class_movie.m
+----------------------------------
+
+- Open in Matlab and modify if necessary
+- Run

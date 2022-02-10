@@ -1,0 +1,7 @@
+*.DS*
+*.iml
+*.xml
+*.idea
+*.pyc*
+*cpython*
+*.out
