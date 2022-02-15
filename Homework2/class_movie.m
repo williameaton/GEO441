@@ -1,3 +1,7 @@
+clc
+clear all 
+close all 
+
 %axis equal
 a=zeros(500,400);
 fid= fopen('homo4th.out','r');
@@ -9,6 +13,6 @@ for i=1:100;
    caxis([-0.2 0.2]);
 	
 	
-   pause(1);
+   pause(0.1);
 end
 fclose(fid);

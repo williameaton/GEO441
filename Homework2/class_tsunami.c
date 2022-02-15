@@ -22,14 +22,14 @@ RUN:
 #include <unistd.h> // close function
 
 
-float *v, *p1, *p2, *p3;
-float *f1, *f2, *f3;
+float *v, *vth, *p1, *p2;
+float *f1, *f2;
 int	ord	= 4;
 int	nx	=1000;
 int	ny	=800;
 int	nt	=10000;
 float	h	=10.0;
-float	dt	=10.0;
+float	dt	=1.0;
 char	vmodel[]	="bathymetry.in";
 char	output[]	="hetero4th.out";
 int	itprint	=100;   /* time steps between print messages */
@@ -40,12 +40,12 @@ float	slat	=3.30;
 float	slon	=95.87;
 
 /*WE*/
-int hetero = 1;
+int hetero = 0;
 
-#define V(ix,iy)	v[(ix) +nx*(iy)]
-#define P1(ix,iy)	p1[(ix) +nx*(iy)]
-#define P2(ix,iy)	p2[(ix) +nx*(iy)]
-#define P3(ix,iy)	p3[(ix) +nx*(iy)]
+#define V(ix,iy)		v[(ix) +nx*(iy)]
+#define Vth(ix,iy)	    vth[(ix) +nx*(iy)]
+#define P1(ix,iy)		p1[(ix) +nx*(iy)]
+#define P2(ix,iy)		p2[(ix) +nx*(iy)]
 
 /* 2nd order second-derviative coefficients */
 #define B1	-2.0	
@@ -64,11 +64,12 @@ float	mindepth	= 10.0; /* minimum depth to consider still ocean (m) */
 int ixref	=0;
 int iyref	=0;
 
+
+
 main(int ac, char **av)
    {
-
 	void zap(), output_slice(), xcoord_convert();
-	
+
 	int it, ix, iy, fd;
 	int ixs, iys;
 	float *tmp, vel, f, val, velmax;
@@ -81,12 +82,13 @@ main(int ac, char **av)
 	fprintf(stderr,"order= %d\n",ord);
 	printf("Heterogenous (1) or Homogenous (0): %d\n", hetero);
 	v= (float *)(malloc(4*nx*ny));
+	vth= (float *)(malloc(4*nx*ny));
+
 	f1= (float *)(malloc(4*nx*ny));
 	f2= (float *)(malloc(4*nx*ny));
-	f3= (float *)(malloc(4*nx*ny));
 
 
-	if(v == NULL || f1 == NULL || f2 == NULL || f3 == NULL)
+	if(v == NULL || f1 == NULL || f2 == NULL)
 	   {
 		fprintf(stderr,"cannot alloc memory\n");
 		exit(-1);
@@ -115,21 +117,28 @@ main(int ac, char **av)
 		/* note 0.001 to convert depth (m) to km */
 		if(val > mindepth) vel= sqrt(G*val*0.001);
 		 else		   vel= -0.001;
+		
 		if(vel > velmax) velmax= vel;
-		if(vel > 0.0) V(ix,iy)= vel*vel*dt*dt/(h*h);
-		 else	      V(ix,iy)= -0.001;
-	   }
+		if(vel > 0.0) 
+		  {
+			V(ix,iy) = vel*vel;
+			Vth(ix,iy) = vel*vel*dt*dt/(h*h);
+		  }	
+		else	 
+		  {
+            V(ix,iy)= -0.001;
+			Vth(ix,iy)= -0.001;
+	      }
+	   }  
 	fprintf(stdout,"maximum velocity = %8.4f (km/s)\n",velmax);
 	fprintf(stdout,"nx= %d ny=%d nt=%d h=%8.4f dt=%8.4f\n",nx,ny,nt,h,dt);
 
 	/* point the memory planes to real memory and zero it */
 	p1= f1;
 	p2= f2;
-	p3= f3;
 
 	zap(p1,nx*ny);
 	zap(p2,nx*ny);
-	zap(p3,nx*ny);
 
 
 	/* add source */
@@ -166,37 +175,45 @@ main(int ac, char **av)
 			   }
 			 else
 			   {
-				/* 4th-order */
-				/* P1 = t-1 timestep  
-				 * P2 = current timestep  
-				 * The newest time step is calculated and stored into P1 in the above 2nd order system
-				 * C1 = 1/12
-				 * C2 = 16
-				 * C3 = 30
-				 * Above the velocity is actually stored as V = v^2 * dt*2/dx*2 which is very annoying. Alas.
-				 * There is an implicit assumption that dx = dy for these calculations otherwise using V as defined above does not work 
-				 *  */
-			           
-				   lhs_term   = 2*P2(ix,iy) - P1(ix,iy);
-		
-				   homo_termx =  C1*V(ix, iy)*(-P2(ix+2,iy) + C2*P2(ix+1,iy) - C3*P2(ix,iy) + C2*P2(ix-1,iy) - P2(ix-2,iy)) ;
-				   homo_termy =  C1*V(ix, iy)*(-P2(ix,iy+2) + C2*P2(ix,iy+1) - C3*P2(ix,iy) + C2*P2(ix,iy-1) - P2(ix,iy-2)) ;
-			           
-				   homogenous = lhs_term + homo_termx + homo_termy;
-					
-				/* Heterogenous terms: 
-				 * C4 = 1/144
-				 * C5 = 8.000
-				 * Note below that hetero is an integer that is 0 for homogenous case and 1 for heterogenous case
-				 *  */
 
-				   heterox = C4*(-P2(ix+2,iy) + C5*P2(ix+1,iy) - C5*P2(ix-1,iy) + P2(ix-2,iy))*(-V(ix+2,iy) + C5*V(ix+1,iy) - C5*V(ix-1,iy) + V(ix-2,iy));
-				   heteroy = C4*(-P2(ix,iy+2) + C5*P2(ix,iy+1) - C5*P2(ix,iy-1) + P2(ix,iy-2))*(-V(ix,iy+2) + C5*V(ix,iy+1) - C5*V(ix,iy-1) + V(ix,iy-2));
+                 /* 4th-order 
+                  * P1 = t-1 timestep  
+                  * P2 = current timestep  
+                  * The newest time step is calculated and stored into P1 in the above 2nd order system
+                  * C1 = 1/12
+                  * C2 = 16
+                  * C3 = 30
+                  * Above the velocity is actually stored as V = v^2 * dt*2/dx*2 which is very annoying. Alas.
+                  * There is an implicit assumption that dx = dy for these calculations otherwise using V as defined above does not work 
+                  *  */
+                       
+                   lhs_term   = 2*P2(ix,iy) - P1(ix,iy);
+        
+                   homo_termx =  C1*Vth(ix, iy)*(-P2(ix+2,iy) + C2*P2(ix+1,iy) - C3*P2(ix,iy) + C2*P2(ix-1,iy) - P2(ix-2,iy)) ;
+                   homo_termy =  C1*Vth(ix, iy)*(-P2(ix,iy+2) + C2*P2(ix,iy+1) - C3*P2(ix,iy) + C2*P2(ix,iy-1) - P2(ix,iy-2)) ;
+                       
+                   homogenous = lhs_term + homo_termx + homo_termy;
+                    
+                 /* Heterogenous terms: 
+                  * C4 = 1/144
+                  * C5 = 8.000
+                  * Note below that hetero is an integer that is 0 for homogenous case and 1 for heterogenous case
+                  *  */
+                 if(hetero==1){                     
 
-			          
-		           P1(ix,iy) = homogenous + heterox + heteroy; 
 
-			   }
+                   heterox = (dt*dt)*C4*(-P2(ix+2,iy) + C5*(P2(ix+1,iy)- P2(ix-1,iy)) + P2(ix-2,iy))
+                                       *(- V(ix+2,iy) + C5*(V(ix+1,iy) - V(ix-1,iy)) + V(ix-2,iy))/(h*h);
+                   
+                   heteroy = (dt*dt)*C4*(P2(ix,iy-2)-P2(ix,iy+2) + C5*(P2(ix,iy+1) - P2(ix,iy-1)))
+                               *(V(ix,iy-2) - V(ix,iy+2) + C5*(V(ix,iy+1) -  V(ix,iy-1)) )/(h*h);
+
+                   }
+
+                 P1(ix,iy) = homogenous + (heterox + heteroy)*hetero; 
+
+
+		   		}
 		   }
 	
 		/* Dirichlet boundary conditions */
@@ -213,11 +230,14 @@ main(int ac, char **av)
 		/* rotate the memory pointers */
 		tmp= p1; p1= p2; p2= tmp;
 	   }
-   }
+	}
+
+
+
 
 #define DEG2KM	111.195
 #define DEG2R	  0.0174532
-void xcoord_convert(double slat,double slon,int *ixs,int *iys)
+void xcoord_convert(double slat, double slon,int *ixs,int *iys)
    {
 	/* convert (lat,lon) to grid coords (ixs,iys) */
 	double cos();
@@ -247,8 +267,7 @@ void zap(float *x, int n)
 	for(i=0; i<n; i++) x[i]= 0.0;
    }
 
-double
-getmax(float *x, int n)
+double getmax(float *x, int n)
    {
 	/* find the absolute max of a plane */
 	int i;
@@ -265,7 +284,6 @@ getmax(float *x, int n)
 float line[1000];
 int outfd	= -1;
 int	istep	= 2;
-
 void output_slice(float *x,int nx,int ny,double t)
    {
 	double max, getmax(), val;
