@@ -21,8 +21,8 @@ RUN:
 #include <fcntl.h> // open function
 #include <unistd.h> // close function
 
-
-float *v, *vth, *p1, *p2;
+/* WE - added a few extra arrays - V now just holds velocity where as Vth holds V*((dt/h)^2); Vgradx and Vgrady hold gradients of x,y   */
+float *v, *vth, *vgradx, *vgrady, *p1, *p2;
 float *f1, *f2;
 int	ord	= 4;
 int	nx	=1000;
@@ -40,17 +40,22 @@ float	slat	=3.30;
 float	slon	=95.87;
 
 /*WE*/
-int hetero = 0;
+int hetero = 1;
 
 #define V(ix,iy)		v[(ix) +nx*(iy)]
 #define Vth(ix,iy)	    vth[(ix) +nx*(iy)]
+#define Vgradx(ix,iy)	vgradx[(ix) +nx*(iy)]
+#define Vgrady(ix,iy)	vgrady[(ix) +nx*(iy)]
+
 #define P1(ix,iy)		p1[(ix) +nx*(iy)]
 #define P2(ix,iy)		p2[(ix) +nx*(iy)]
 
 /* 2nd order second-derviative coefficients */
 #define B1	-2.0	
 #define B2	 1.0	
+
 /* WE 4th order second-derviative coefficients */
+#define C0   0.6666666666
 #define C1	 0.0833333333
 #define C2   16.000000000
 #define C3   30.000000000
@@ -72,7 +77,7 @@ main(int ac, char **av)
 
 	int it, ix, iy, fd;
 	int ixs, iys;
-	float *tmp, vel, f, val, velmax;
+	float *tmp, vel, f, val, velmax, dtdh2;
 	double norm(), sqrt();
 
 	/*WE temp variables */
@@ -83,6 +88,8 @@ main(int ac, char **av)
 	printf("Heterogenous (1) or Homogenous (0): %d\n", hetero);
 	v= (float *)(malloc(4*nx*ny));
 	vth= (float *)(malloc(4*nx*ny));
+	vgradx = (float *)(malloc(4*nx*ny));
+	vgrady = (float *)(malloc(4*nx*ny));
 
 	f1= (float *)(malloc(4*nx*ny));
 	f2= (float *)(malloc(4*nx*ny));
@@ -109,6 +116,10 @@ main(int ac, char **av)
 	/* convert depth to velocity v= sqrt(g*depth).
 	 * set values for land (pos. depths) to negative as flag
 	 */
+	
+	/* Calculate dt/dh squared */
+	dtdh2 = (dt*dt)/(h*h);
+
 	velmax= 0.0;
 	for(iy=0; iy<ny; iy++)
 	for(ix=0; ix<nx; ix++)
@@ -119,10 +130,11 @@ main(int ac, char **av)
 		 else		   vel= -0.001;
 		
 		if(vel > velmax) velmax= vel;
+		/* WE - define V as velocity squared where Vth is velocity squared with dt/dx factor */
 		if(vel > 0.0) 
 		  {
 			V(ix,iy) = vel*vel;
-			Vth(ix,iy) = vel*vel*dt*dt/(h*h);
+			Vth(ix,iy) = vel*vel*dtdh2;
 		  }	
 		else	 
 		  {
@@ -130,8 +142,22 @@ main(int ac, char **av)
 			Vth(ix,iy)= -0.001;
 	      }
 	   }  
-	fprintf(stdout,"maximum velocity = %8.4f (km/s)\n",velmax);
-	fprintf(stdout,"nx= %d ny=%d nt=%d h=%8.4f dt=%8.4f\n",nx,ny,nt,h,dt);
+
+
+	/*WE edit - pre-calculate the gradient of the velocity for computation efficiency - note that V no longer is multiplied by dt^2/h^2 */
+	for(iy=1; iy < ny-1; iy++)
+		for(ix=1; ix < nx-1; ix++)
+		   {
+			   Vgradx(ix, iy) = (1/h) * (-C1*V(ix+2, iy) + C0*V(ix+1, iy) - C0*V(ix-1, iy) + C1*V(ix-2, iy));
+			   Vgrady(ix, iy) = (1/h) * (-C1*V(ix, iy+2) + C0*V(ix, iy+1) - C0*V(ix, iy-1) + C1*V(ix, iy-2));
+		   } 
+
+
+	for(iy=0; iy<ny; iy++)
+	for(ix=0; ix<nx; ix++)
+
+	/*fprintf(stdout,"maximum velocity = %8.4f (km/s)\n",velmax); 
+	fprintf(stdout,"nx= %d ny=%d nt=%d h=%8.4f dt=%8.4f\n",nx,ny,nt,h,dt); */
 
 	/* point the memory planes to real memory and zero it */
 	p1= f1;
@@ -183,7 +209,6 @@ main(int ac, char **av)
                   * C1 = 1/12
                   * C2 = 16
                   * C3 = 30
-                  * Above the velocity is actually stored as V = v^2 * dt*2/dx*2 which is very annoying. Alas.
                   * There is an implicit assumption that dx = dy for these calculations otherwise using V as defined above does not work 
                   *  */
                        
@@ -194,28 +219,43 @@ main(int ac, char **av)
                        
                    homogenous = lhs_term + homo_termx + homo_termy;
                     
+
                  /* Heterogenous terms: 
-                  * C4 = 1/144
+                  * C0 = 2/3
+				  * C1 = 1/12
+				  * C4 = 1/144
                   * C5 = 8.000
                   * Note below that hetero is an integer that is 0 for homogenous case and 1 for heterogenous case
                   *  */
+
+
                  if(hetero==1){                     
 
-
-                   heterox = (dt*dt)*C4*(-P2(ix+2,iy) + C5*(P2(ix+1,iy)- P2(ix-1,iy)) + P2(ix-2,iy))
-                                       *(- V(ix+2,iy) + C5*(V(ix+1,iy) - V(ix-1,iy)) + V(ix-2,iy))/(h*h);
+				   
+                   heterox = dtdh2*C4*(-P2(ix+2,iy) + C5*(P2(ix+1,iy)- P2(ix-1,iy)) + P2(ix-2,iy))
+                                       *(- V(ix+2,iy) + C5*(V(ix+1,iy) - V(ix-1,iy)) + V(ix-2,iy));
                    
-                   heteroy = (dt*dt)*C4*(P2(ix,iy-2)-P2(ix,iy+2) + C5*(P2(ix,iy+1) - P2(ix,iy-1)))
-                               *(V(ix,iy-2) - V(ix,iy+2) + C5*(V(ix,iy+1) -  V(ix,iy-1)) )/(h*h);
+
+                   heteroy = dtdh2*C4*(P2(ix,iy-2)-P2(ix,iy+2) + C5*(P2(ix,iy+1) - P2(ix,iy-1)))
+                               *(V(ix,iy-2) - V(ix,iy+2) + C5*(V(ix,iy+1) -  V(ix,iy-1)) ); 
+				   
+				   
+				   /* 
+					THIS METHOD BLOWS UP FASTER
+				   heterox = (dt*dt) * (-C1*P2(ix+2,iy) + C0*(P2(ix+1,iy) - C1*P2(ix-1,iy)) + C0*P2(ix-2,iy)) * Vgradx(ix,iy)/h;
+				   heteroy = (dt*dt) * (-C1*P2(ix,iy+2) + C0*(P2(ix,iy+1) - C1*P2(ix,iy-1)) + C0*P2(ix,iy-2)) * Vgrady(ix,iy)/h; 
+				   */
 
                    }
 
-                 P1(ix,iy) = homogenous + (heterox + heteroy)*hetero; 
+                 P1(ix,iy) = homogenous + (heterox + heteroy)*hetero ; 
 
 
 		   		}
 		   }
 	
+
+
 		/* Dirichlet boundary conditions */
 		for(ix=0,    iy=0;    ix<nx; ix++) P1(ix,iy)= 0.0;
 		for(ix=0,    iy=ny-1; ix<nx; ix++) P1(ix,iy)= 0.0;
