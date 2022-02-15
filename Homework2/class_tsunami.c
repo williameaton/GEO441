@@ -22,7 +22,7 @@ RUN:
 #include <unistd.h> // close function
 
 /* WE - added a few extra arrays - V now just holds velocity where as Vth holds V*((dt/h)^2); Vgradx and Vgrady hold gradients of x,y   */
-float *v, *vth, *vgradx, *vgrady, *p1, *p2;
+float *v, *vth, *vgradx, *vgrady, *vsmooth, *p1, *p2;
 float *f1, *f2;
 int	ord	= 4;
 int	nx	=1000;
@@ -46,6 +46,8 @@ int hetero = 1;
 #define Vth(ix,iy)	    vth[(ix) +nx*(iy)]
 #define Vgradx(ix,iy)	vgradx[(ix) +nx*(iy)]
 #define Vgrady(ix,iy)	vgrady[(ix) +nx*(iy)]
+#define Vsmooth(ix,iy)	vsmooth[(ix) +nx*(iy)]
+
 
 #define P1(ix,iy)		p1[(ix) +nx*(iy)]
 #define P2(ix,iy)		p2[(ix) +nx*(iy)]
@@ -88,8 +90,10 @@ main(int ac, char **av)
 	printf("Heterogenous (1) or Homogenous (0): %d\n", hetero);
 	v= (float *)(malloc(4*nx*ny));
 	vth= (float *)(malloc(4*nx*ny));
-	vgradx = (float *)(malloc(4*nx*ny));
-	vgrady = (float *)(malloc(4*nx*ny));
+	vgradx  = (float *)(malloc(4*nx*ny));
+	vgrady  = (float *)(malloc(4*nx*ny));
+	vsmooth = (float *)(malloc(4*nx*ny));
+
 
 	f1= (float *)(malloc(4*nx*ny));
 	f2= (float *)(malloc(4*nx*ny));
@@ -130,18 +134,55 @@ main(int ac, char **av)
 		 else		   vel= -0.001;
 		
 		if(vel > velmax) velmax= vel;
-		/* WE - define V as velocity squared where Vth is velocity squared with dt/dx factor */
 		if(vel > 0.0) 
 		  {
 			V(ix,iy) = vel*vel;
-			Vth(ix,iy) = vel*vel*dtdh2;
 		  }	
 		else	 
 		  {
             V(ix,iy)= -0.001;
-			Vth(ix,iy)= -0.001;
 	      }
 	   }  
+
+	
+	/*WE - try smoothing the bathymetry */
+	for(iy=2; iy < ny-2; iy++)
+		for(ix=2; ix < nx-2; ix++)
+		   {
+			   Vsmooth(ix,iy) = (1/273.0) * 
+			   					V(ix-2, iy-2) + 4.0*V(ix-1, iy-2) + 7.0*V(ix, iy-2) + 4.0*V(ix+1, iy-2) + V(ix+2, iy-2) + 
+						    4.0*V(ix-2, iy-1) + 16.0*V(ix-1, iy-1) + 26.0*V(ix, iy-1) + 16.0*V(ix+1, iy-1) + 4.0*V(ix+2, iy-1) + 
+						    7.0*V(ix-2, iy) + 26.0*V(ix-1, iy) + 41.0*V(ix, iy) + 26.0*V(ix+1, iy) + 7.0*V(ix+2, iy) + 
+						    4.0*V(ix-2, iy+1) + 16.0*V(ix-1, iy+1) + 26.0*V(ix, iy+1) + 16.0*V(ix+1, iy+1) + 4.0*V(ix+2, iy+1) + 
+			   					V(ix-2, iy+2) + 4.0*V(ix-1, iy+2) + 7.0*V(ix, iy+2) + 4.0*V(ix+1, iy+2) + V(ix+2, iy+2);
+		   } 
+	
+	/*Bounary elements for smoothing*/
+	for(iy=0; iy==ny; iy++) 
+		   { 
+			   Vsmooth(0,iy)    = Vsmooth(2,iy);
+			   Vsmooth(1,iy)    = Vsmooth(2,iy);
+			   Vsmooth(nx,iy)   = Vsmooth(ny-2,iy);
+			   Vsmooth(nx-1,iy) = Vsmooth(ny-2,iy);
+		   }
+
+	for(ix=0; ix==nx; ix++) 
+		   { 
+			   Vsmooth(ix,0)    = Vsmooth(2,iy);
+			   Vsmooth(ix,1)    = Vsmooth(2,iy);
+			   Vsmooth(ix,ny)   = Vsmooth(ix,ny-2);
+			   Vsmooth(ix,ny-1) = Vsmooth(ix,ny-2);
+		   }
+
+	/*Reset these smoothed values to the original arrays: */
+	for(iy=0; iy==ny; iy++)
+		for(ix=0; ix==nx; ix++)
+		{
+			V(ix, iy)  = Vsmooth(ix,iy);
+			Vth(ix,iy) = Vsmooth(ix, iy)*dtdh2; 
+		}
+
+
 
 
 	/*WE edit - pre-calculate the gradient of the velocity for computation efficiency - note that V no longer is multiplied by dt^2/h^2 */
@@ -151,7 +192,6 @@ main(int ac, char **av)
 			   Vgradx(ix, iy) = (1/h) * (-C1*V(ix+2, iy) + C0*V(ix+1, iy) - C0*V(ix-1, iy) + C1*V(ix-2, iy));
 			   Vgrady(ix, iy) = (1/h) * (-C1*V(ix, iy+2) + C0*V(ix, iy+1) - C0*V(ix, iy-1) + C1*V(ix, iy-2));
 		   } 
-
 
 	for(iy=0; iy<ny; iy++)
 	for(ix=0; ix<nx; ix++)
