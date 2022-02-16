@@ -79,4 +79,28 @@ P_{i,j}^{t+1} = (\Delta t)^2 {v_{i,j}^{t}}^2 \Big[\frac{-P_{i+2,j}^{t} + 16P_{i+
 \end{multline*}
 
 
+\subsection{Chain Rule variations}
+Alternatively we can replace $\partial_xv^2 \rightarrow  2v\partial_x v$ and incorporate this into the equations for the heterogenous cases. In doing so we get for second and fourth order, respectively: 
+
+\begin{multline*}
+P_{i,j}^{t+1} = (\Delta t)^2\Bigg[(\frac{(P_{i+1,j}^{t} - P_{i-1,j}^{t})({v_{i+1,j}^{t}} - {v_{i-1,j}^{t}})}{2(\Delta x)^2} + \frac{(P_{i,j+1}^{t} - P_{i,j-1}^{t})({v_{i,j+1}^{t}} - {v_{i,j-1}^{t}})}{2(\Delta y)^2}) v^t_{i,j} \\
++ {v_{i,j}^{t}}^2\Big( \frac{P_{i+1,j}^{t} - 2P_{i,j}^{t} + P_{i-1,j}^{t}}{(\Delta x)^2} + \frac{P_{i,j+1}^{t} - 2P_{i,j}^{t} + P_{i,j-1}^{t}}{(\Delta y)^2} \Big) \Bigg] + 2P_{i,j}^{t} - P_{i,j}^{t-1}
+\end{multline*}
+\begin{multline*}
+P_{i,j}^{t+1} = (\Delta t)^2\Bigg[ \frac{(-P_{i+2,j}^{t} + 8P_{i+1,j}^{t} -8P_{i-1,j}^{t} + P_{i-2,j}^{t}) (-{v_{i+2,j}^{t}} + 8{v_{i+1,j}^{t}} -8{v_{i-1,j}^{t}} + {v_{i-2,j}^{t}} ) }{72 (\Delta x)^2}v^t_{i,j} \\
++ \frac{(-P_{i,j+2}^{t} + 8P_{i,j+1}^{t} -8P_{i,j-1}^{t} + P_{i,j-2}^{t}) (-{v_{i,j+2}^{t}} + 8{v_{i,j+1}^{t}} -8{v_{i,j-1}^{t}} + {v_{i,j-2}^{t}} ) }{72 (\Delta y)^2}v^t_{i,j} \\
++ {v_{i,j}^{t}}^2 \Big[\frac{-P_{i+2,j}^{t} + 16P_{i+1,j}^{t} -30P_{i,j}^{t} +16P_{i-1,j}^{t} - P_{i-2,j}^{t} }{12(\Delta x)^2} \\
++ \frac{-P_{i,j+2}^{t} + 16P_{i,j+1}^{t} -30P_{i,j}^{t} + 16P_{i,j-1}^{t} - P_{i,j-2}^{t} }{12(\Delta y)^2}\Big] \Bigg] + 2P_{i,j}^{t} - P_{i,j}^{t-1}
+\end{multline*}
+These are the formula that I actually use in my code. 
+
+\section{Running the code}
+Currently the code seems to be stable for the homogenous case with both a 2\textsuperscript{nd} and 4\textsuperscript{th} order spatial discretisation. However the heterogenous version appears to be unstable for both cases. To try and rectify this I attempted to implement a gaussian smoothing kernel to the velocity (bathymetry) model. This can be switched on and off in the same way as heterogenity can be by setting:  
+\begin{verbatim}
+int hetero   = 1      /* 0 for homogenous; 1 for heterogenous*/
+int smooth   = 1      /* 1 to apply smoothing kernel; no smoothing otherwise */
+\end{verbatim}
+
+I unfortunately can not find the issue that is causing these instabilities but will continue to try and resolve it. 
+
 \end{document}

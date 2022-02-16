@@ -15,7 +15,8 @@ COMPILE:
 RUN:
   ./class_tsunami
 */
-#include	<stdio.h>
+#include <stdio.h>
+#include <math.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h> // open function
@@ -24,14 +25,21 @@ RUN:
 /* WE - added a few extra arrays - V now just holds velocity where as Vth holds V*((dt/h)^2); Vgradx and Vgrady hold gradients of x,y   */
 float *v, *vth, *vgradx, *vgrady, *vsmooth, *p1, *p2;
 float *f1, *f2;
+
+/*WE*/
+int hetero = 1;
+int smooth = 0;
 int	ord	= 4;
+
+
+
 int	nx	=1000;
 int	ny	=800;
 int	nt	=10000;
 float	h	=10.0;
-float	dt	=1.0;
+float	dt	=10.0;
 char	vmodel[]	="bathymetry.in";
-char	output[]	="hetero4th.out";
+char	output[]	="4heterorough.out";
 int	itprint	=100;   /* time steps between print messages */
 int	itslice	=100;  /* time steps between slice outputs */
 float	latref	=-40.0;
@@ -39,14 +47,16 @@ float	lonref	=35;
 float	slat	=3.30;
 float	slon	=95.87;
 
-/*WE*/
-int hetero = 1;
+
 
 #define V(ix,iy)		v[(ix) +nx*(iy)]
 #define Vth(ix,iy)	    vth[(ix) +nx*(iy)]
+#define Vsmooth(ix,iy)	vsmooth[(ix) +nx*(iy)]
+
+/*
 #define Vgradx(ix,iy)	vgradx[(ix) +nx*(iy)]
 #define Vgrady(ix,iy)	vgrady[(ix) +nx*(iy)]
-#define Vsmooth(ix,iy)	vsmooth[(ix) +nx*(iy)]
+*/
 
 
 #define P1(ix,iy)		p1[(ix) +nx*(iy)]
@@ -61,7 +71,7 @@ int hetero = 1;
 #define C1	 0.0833333333
 #define C2   16.000000000
 #define C3   30.000000000
-#define C4   0.0069444444
+#define C4   0.0138888888
 #define C5   8.0000000000
 
 
@@ -85,14 +95,15 @@ main(int ac, char **av)
 	/*WE temp variables */
 	double lhs_term, homo_termx, homo_termy, homogenous, heterox, heteroy;
 
-
-	fprintf(stderr,"order= %d\n",ord);
-	printf("Heterogenous (1) or Homogenous (0): %d\n", hetero);
+	
 	v= (float *)(malloc(4*nx*ny));
 	vth= (float *)(malloc(4*nx*ny));
-	vgradx  = (float *)(malloc(4*nx*ny));
-	vgrady  = (float *)(malloc(4*nx*ny));
 	vsmooth = (float *)(malloc(4*nx*ny));
+    /*
+    vgradx  = (float *)(malloc(4*nx*ny));
+	vgrady  = (float *)(malloc(4*nx*ny));
+    */
+
 
 
 	f1= (float *)(malloc(4*nx*ny));
@@ -117,6 +128,8 @@ main(int ac, char **av)
 	close(fd);
 	output_slice(v,nx,ny,-1.0);
 
+
+
 	/* convert depth to velocity v= sqrt(g*depth).
 	 * set values for land (pos. depths) to negative as flag
 	 */
@@ -133,71 +146,52 @@ main(int ac, char **av)
 		if(val > mindepth) vel= sqrt(G*val*0.001);
 		 else		   vel= -0.001;
 		
+
 		if(vel > velmax) velmax= vel;
 		if(vel > 0.0) 
-		  {
-			V(ix,iy) = vel*vel;
-		  }	
+		  { 
+			V(ix,iy) = fabsf(vel);
+            Vth(ix,iy) = vel*vel*dtdh2;}
+
 		else	 
 		  {
-            V(ix,iy)= -0.001;
+            V(ix,iy)= 0.0;
+            Vth(ix, iy) = 0.0; 
 	      }
-	   }  
-
-	
-	/*WE - try smoothing the bathymetry */
-	for(iy=2; iy < ny-2; iy++)
-		for(ix=2; ix < nx-2; ix++)
-		   {
-			   Vsmooth(ix,iy) = (1/273.0) * 
-			   					V(ix-2, iy-2) + 4.0*V(ix-1, iy-2) + 7.0*V(ix, iy-2) + 4.0*V(ix+1, iy-2) + V(ix+2, iy-2) + 
-						    4.0*V(ix-2, iy-1) + 16.0*V(ix-1, iy-1) + 26.0*V(ix, iy-1) + 16.0*V(ix+1, iy-1) + 4.0*V(ix+2, iy-1) + 
-						    7.0*V(ix-2, iy) + 26.0*V(ix-1, iy) + 41.0*V(ix, iy) + 26.0*V(ix+1, iy) + 7.0*V(ix+2, iy) + 
-						    4.0*V(ix-2, iy+1) + 16.0*V(ix-1, iy+1) + 26.0*V(ix, iy+1) + 16.0*V(ix+1, iy+1) + 4.0*V(ix+2, iy+1) + 
-			   					V(ix-2, iy+2) + 4.0*V(ix-1, iy+2) + 7.0*V(ix, iy+2) + 4.0*V(ix+1, iy+2) + V(ix+2, iy+2);
-		   } 
-	
-	/*Bounary elements for smoothing*/
-	for(iy=0; iy==ny; iy++) 
-		   { 
-			   Vsmooth(0,iy)    = Vsmooth(2,iy);
-			   Vsmooth(1,iy)    = Vsmooth(2,iy);
-			   Vsmooth(nx,iy)   = Vsmooth(ny-2,iy);
-			   Vsmooth(nx-1,iy) = Vsmooth(ny-2,iy);
-		   }
-
-	for(ix=0; ix==nx; ix++) 
-		   { 
-			   Vsmooth(ix,0)    = Vsmooth(2,iy);
-			   Vsmooth(ix,1)    = Vsmooth(2,iy);
-			   Vsmooth(ix,ny)   = Vsmooth(ix,ny-2);
-			   Vsmooth(ix,ny-1) = Vsmooth(ix,ny-2);
-		   }
-
-	/*Reset these smoothed values to the original arrays: */
-	for(iy=0; iy==ny; iy++)
-		for(ix=0; ix==nx; ix++)
-		{
-			V(ix, iy)  = Vsmooth(ix,iy);
-			Vth(ix,iy) = Vsmooth(ix, iy)*dtdh2; 
-		}
+	     }  
 
 
 
+    if (smooth ==1){
+        /*WE - try smoothing the bathymetry */
+            printf("Applying smoothing filter...\n");
+            for(iy=2; iy < ny-2; iy++)
+                {
+                    for(ix=2; ix < nx-2; ix++)
+                    {
+                    
+                        Vsmooth(ix,iy) = (1.0/273.0) * 
+                                        (   V(ix-2, iy-2) +  4.0*V(ix-1, iy-2) +  7.0*V(ix, iy-2) +  4.0*V(ix+1, iy-2) +     V(ix+2, iy-2) + 
+                                        4.0*V(ix-2, iy-1) + 16.0*V(ix-1, iy-1) + 26.0*V(ix, iy-1) + 16.0*V(ix+1, iy-1) + 4.0*V(ix+2, iy-1) + 
+                                        7.0*V(ix-2, iy  ) + 26.0*V(ix-1, iy  ) + 41.0*V(ix, iy  ) + 26.0*V(ix+1, iy  ) + 7.0*V(ix+2, iy  ) + 
+                                        4.0*V(ix-2, iy+1) + 16.0*V(ix-1, iy+1) + 26.0*V(ix, iy+1) + 16.0*V(ix+1, iy+1) + 4.0*V(ix+2, iy+1) + 
+                                            V(ix-2, iy+2) +  4.0*V(ix-1, iy+2) +  7.0*V(ix, iy+2) +  4.0*V(ix+1, iy+2) +     V(ix+2, iy+2));
 
-	/*WE edit - pre-calculate the gradient of the velocity for computation efficiency - note that V no longer is multiplied by dt^2/h^2 */
-	for(iy=1; iy < ny-1; iy++)
-		for(ix=1; ix < nx-1; ix++)
-		   {
-			   Vgradx(ix, iy) = (1/h) * (-C1*V(ix+2, iy) + C0*V(ix+1, iy) - C0*V(ix-1, iy) + C1*V(ix-2, iy));
-			   Vgrady(ix, iy) = (1/h) * (-C1*V(ix, iy+2) + C0*V(ix, iy+1) - C0*V(ix, iy-1) + C1*V(ix, iy-2));
-		   } 
 
-	for(iy=0; iy<ny; iy++)
-	for(ix=0; ix<nx; ix++)
+                    } 
+                }
+                
 
-	/*fprintf(stdout,"maximum velocity = %8.4f (km/s)\n",velmax); 
-	fprintf(stdout,"nx= %d ny=%d nt=%d h=%8.4f dt=%8.4f\n",nx,ny,nt,h,dt); */
+        /*Reset these smoothed values to the original arrays: */
+        for(iy=2; iy<ny-2; iy++)
+            for(ix=2; ix<nx-2; ix++)
+            {
+                V  (ix,iy)  = Vsmooth(ix,iy);
+                Vth(ix,iy)  = Vsmooth(ix, iy)*Vsmooth(ix, iy)*dtdh2; 
+            }
+
+    }
+
 
 	/* point the memory planes to real memory and zero it */
 	p1= f1;
@@ -211,13 +205,32 @@ main(int ac, char **av)
 	xcoord_convert(slat,slon,&ixs,&iys);
 	fprintf(stderr,"source %8.3f %9.3f %4d %4d\n",slat,slon,ixs,iys);
 	/*  source is placed on a grid:
-	 *    1/4  1/2  1/4
-	 *    1/2   1   1/2
-	 *    1/4  1/2  1/4
-	 */
-	P2(ixs,iys)= 1.0;
+     *    0.1  0.2  0.4  0.2  0.1
+	 *    0.2  0.4  0.7  0.4  0.2
+	 *    0.4  0.7   1   0.7  0.4
+	 *    0.2  0.4  0.7  0.4  0.2
+     *    0.1  0.2  0.4  0.2  0.1
+	
+
+	P2(ixs,iys)     = 1.0;
+	P2(ixs +1,iys ) = P2(ixs-1,iys  ) = P2(ixs  ,iys+1) = P2(ixs   ,iys-1) = 0.7;
+	P2(ixs+1,iys+1) = P2(ixs-1,iys+1) = P2(ixs+1,iys-1) = P2(ixs-1 ,iys-1) = P2(ixs,iys+2) = P2(ixs,iys-2) = P2(ixs+2,iys) = P2(ixs-2,iys) = 0.4;
+    P2(ixs +1,iys+2) = P2(ixs-1,iys+2) = P2(ixs+2  ,iys+1) = P2(ixs+2,iys-1) = P2(ixs-2,iys+1) = P2(ixs-1,iys-1) = P2(ixs-1  ,iys-2) = P2(ixs+1,iys-2) = 0.2;
+    P2(ixs+2,iys+2) = P2(ixs-2,iys-2) = P2(ixs+2,iys-2) = P2(ixs-2 ,iys+2) = 0.1; */
+    
+    P2(ixs,iys)= 1.0;
 	P2(ixs +1,iys  )= P2(ixs -1,iys  )= P2(ixs   ,iys+1)= P2(ixs   ,iys-1)= 0.5;
 	P2(ixs+1,iys+1)= P2(ixs-1,iys+1)= P2(ixs+1,iys-1)= P2(ixs-1,iys-1)= 0.25;
+
+    /* Initialise - WE*/
+    heterox = 0.00;  
+    heteroy = 0.00;
+    
+    fprintf(stderr,"order= %d\n",ord);
+	printf("Heterogenous (1) or Homogenous (0): %d\n", hetero);
+    printf("Writing to: %s\n", output);
+
+
 
 	/* loop over time steps */
 	for(it= 0; it<nt; it++)
@@ -234,10 +247,18 @@ main(int ac, char **av)
 			   }
 			if(ord == 2 || ix == 1 || ix == nx-2 || iy ==1 || iy == ny-2)
 			   {
-				/* 2nd-order */
-				P1(ix,iy)= 2.0*(1.0+B1*V(ix,iy))*P2(ix,iy) - P1(ix,iy)
-					 + B2*V(ix,iy)*(P2(ix+1,iy)+P2(ix-1,iy)
+				/* 2nd-order */ 
+				homogenous= 2.0*(1.0+B1*Vth(ix,iy))*P2(ix,iy) - P1(ix,iy)
+					 + B2*Vth(ix,iy)*(P2(ix+1,iy)+P2(ix-1,iy)
 						       +P2(ix,iy+1)+P2(ix,iy-1));
+
+                if (hetero == 1){
+                    heterox = 0.5 * V(ix,iy) * dtdh2 * (V(ix+1,iy)-V(ix-1,iy)) * (P2(ix+1,iy)-P2(ix-1,iy));
+                    heteroy = 0.5 * V(ix,iy) * dtdh2 * (V(ix,iy+1)-V(ix,iy-1)) * (P2(ix,iy+1)-P2(ix,iy-1));
+                  }
+             
+            P1(ix,iy) = homogenous + heterox + heteroy;
+
 			   }
 			 else
 			   {
@@ -252,18 +273,18 @@ main(int ac, char **av)
                   * There is an implicit assumption that dx = dy for these calculations otherwise using V as defined above does not work 
                   *  */
                        
-                   lhs_term   = 2*P2(ix,iy) - P1(ix,iy);
+                   lhs_term   = 2.0*P2(ix,iy) - P1(ix,iy);
         
-                   homo_termx =  C1*Vth(ix, iy)*(-P2(ix+2,iy) + C2*P2(ix+1,iy) - C3*P2(ix,iy) + C2*P2(ix-1,iy) - P2(ix-2,iy)) ;
-                   homo_termy =  C1*Vth(ix, iy)*(-P2(ix,iy+2) + C2*P2(ix,iy+1) - C3*P2(ix,iy) + C2*P2(ix,iy-1) - P2(ix,iy-2)) ;
+                   homo_termx =  -P2(ix+2,iy) + C2*P2(ix+1,iy) - C3*P2(ix,iy) + C2*P2(ix-1,iy) - P2(ix-2,iy) ;
+                   homo_termy =  -P2(ix, iy+2) + C2*P2(ix,iy+1) - C3*P2(ix,iy) + C2*P2(ix,iy-1) - P2(ix,iy-2) ;
                        
-                   homogenous = lhs_term + homo_termx + homo_termy;
+                   homogenous = lhs_term + (homo_termx + homo_termy)*C1*V(ix,iy)*V(ix,iy)*dtdh2;
                     
 
                  /* Heterogenous terms: 
                   * C0 = 2/3
 				  * C1 = 1/12
-				  * C4 = 1/144
+				  * C4 = 1/72 (2*1/12*1/12)
                   * C5 = 8.000
                   * Note below that hetero is an integer that is 0 for homogenous case and 1 for heterogenous case
                   *  */
@@ -271,25 +292,18 @@ main(int ac, char **av)
 
                  if(hetero==1){                     
 
-				   
-                   heterox = dtdh2*C4*(-P2(ix+2,iy) + C5*(P2(ix+1,iy)- P2(ix-1,iy)) + P2(ix-2,iy))
-                                       *(- V(ix+2,iy) + C5*(V(ix+1,iy) - V(ix-1,iy)) + V(ix-2,iy));
+                   /* Calculate heterogenous components by using $\partial_x v^2 = 2v \partial_x v $*/
+
+                   heterox = V(ix,iy)*dtdh2*C4 * (-P2(ix+2,iy) + C5*P2(ix+1,iy) - C5*P2(ix-1,iy) + P2(ix-2,iy)) 
+                                               * (- V(ix+2,iy) + C5*V(ix+1,iy)  - C5*V(ix-1,iy) +   V(ix-2,iy));
                    
 
-                   heteroy = dtdh2*C4*(P2(ix,iy-2)-P2(ix,iy+2) + C5*(P2(ix,iy+1) - P2(ix,iy-1)))
-                               *(V(ix,iy-2) - V(ix,iy+2) + C5*(V(ix,iy+1) -  V(ix,iy-1)) ); 
+                   heteroy = V(ix,iy)*dtdh2*C4 * (-P2(ix,iy+2) + C5*P2(ix,iy+1) - C5*P2(ix,iy-1) + P2(ix,iy-2)) 
+                                               * (- V(ix,iy+2) + C5*V(ix,iy+1)  - C5*V(ix,iy-1)+  V(ix,iy-2)); 
 				   
-				   
-				   /* 
-					THIS METHOD BLOWS UP FASTER
-				   heterox = (dt*dt) * (-C1*P2(ix+2,iy) + C0*(P2(ix+1,iy) - C1*P2(ix-1,iy)) + C0*P2(ix-2,iy)) * Vgradx(ix,iy)/h;
-				   heteroy = (dt*dt) * (-C1*P2(ix,iy+2) + C0*(P2(ix,iy+1) - C1*P2(ix,iy-1)) + C0*P2(ix,iy-2)) * Vgrady(ix,iy)/h; 
-				   */
-
                    }
 
-                 P1(ix,iy) = homogenous + (heterox + heteroy)*hetero ; 
-
+                 P1(ix,iy) = homogenous + heterox + heteroy;
 
 		   		}
 		   }
