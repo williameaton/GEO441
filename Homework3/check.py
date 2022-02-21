@@ -10,7 +10,7 @@ L = (0, 100)  # Domain limits
 cp = 1  # Specific heat capacity at constant pressure
 rho = 1  # Density
 k = 0.7  # Conductivity
-method="crank-nicholson"
+method="crank-nicolson"
 
 dtc = [0.4, 0.45, 0.55, 0.6]
 num = len(dtc)
