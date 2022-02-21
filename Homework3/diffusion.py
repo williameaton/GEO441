@@ -1,34 +1,18 @@
 import numpy as np
-import matplotlib.animation as animation
-import matplotlib
 from scipy.sparse.linalg import inv
 import scipy.sparse as ss
 
-class model():
-    def __init__(self, dx, L, cp, rho, k, dt=None, dtc=1):
-        self.dx  = dx
-        self.x   = np.arange(L[0], L[1]+dx, dx)
-        self.cp  = self.x*0 + cp
-        self.rho = self.x*0 + rho
-        self.k   = self.x*0 + k
-        self.dim   = len(self.x)
-
-        if dt!=None:
-            self.dt = dt
-        else:
-            self.dt = dtc*(dx*dx)/( np.amax(self.k)/np.amin(self.rho)*np.amin(self.cp))
-
-        self.prefac = self.dt/(self.rho*self.cp*dx*dx) # 1D array
-
-
 class diffusion():
+    # Diffusion class requires a model object and a model for solving the diffusion equation in time
+    # Method can be forward, backward of crank-nicolson and init func. essentially acts as a factory function to
+    # create object using the correct method
     def __init__(self, model, method):
-        self.m = model
+        self.m = model                          # Model object
+        self.T   = np.zeros((2, model.dim))     # Temperature array for domain
+        self.set_IC()                           # Hard coded initial conditions for this homework
 
-        self.T   = np.zeros((2, model.dim))
-        self.set_IC()
-
-
+        # Determine solver and create (time-independent) matrix for time-marching (self.A)
+        # Point self.march to relevant marching function
         if method == "forward":
             self.A = self.create_A_matrix_forward()
             self.march = self.forward_matrix_march
@@ -41,13 +25,16 @@ class diffusion():
         else:
             raise ValueError("Must be 'forward', 'backward' or 'crank-nicolson' ")
 
+
     def update_T(self, T):
+        # Function to update T if required
         self. T = T
 
+
     def set_IC(self):
+        # Hard-coded initial conditions - impulse at x = 50
         self.T[:, np.where(self.m.x == 50)] = 1
-        #self.T[0, :] = np.sin(2*self.m.x) + 0.5*np.cos(self.m.x) + self.m.x/50
-        #self.T[1, :] = np.sin(2*self.m.x) + 0.5*np.cos(self.m.x) + self.m.x/50
+
 
     def create_A_matrix_forward(self):
         # Creates matrix for first order forward method for diffusion equation:
@@ -73,7 +60,6 @@ class diffusion():
         # Beta at i=0 is undefined so assume it is same as adjacent:
         beta  = (self.m.k[2:] - self.m.k[:-2])/4
         beta = np.insert(beta, [0], [beta[0]])
-
 
         # Calculate the matrix element values as defined in report:
         a = beta - self.m.k[:-1]
@@ -120,14 +106,17 @@ class diffusion():
         A_inv[0,0] = 0
         A_inv[-1,-1] = 0
 
-
         return A_inv
+
+
 
     def forward_matrix_march(self):
         self.T[0, :] = self.A*np.transpose(self.T[1, :])
         self.T = self.T[::-1, :]
 
 
+    # Backward matrix march and cranknicolson are identical - could combine into one function but only a few lines of
+    # code so maybe keep seperate for legibility
     def backward_matrix_march(self):
         self.T[1, :] = np.matmul(self.A, np.transpose(self.T[0, :]))
         self.T = self.T[::-1, :]
@@ -136,44 +125,3 @@ class diffusion():
         self.T[1, :] = self.A*np.transpose(self.T[0, :])
         self.T = self.T[::-1, :]
 
-
-    def march_loop(self):
-        for i in range(1, len(self.m.x)-1):
-            self.T[0, i] = self.T[1, i] + self.m.prefac[i]*( (self.m.k[i+1] - self.m.k[i])*(self.T[1, i+1] - self.T[1, i]) + self.m.k[i]*(self.T[1, i+1] - 2*self.T[1,i] + self.T[1,i-1]) )
-
-
-
-def diff_animate(lines, diff_obj, fig, axes, interval, frames):
-    num = len(lines)
-    fs = 16
-    # Set plot metadata:
-    axes[-1].set_xlabel("X (m)", fontsize=fs)
-    axes[-1].tick_params(axis='x', labelsize=fs)
-    for k in range(num):
-        axes[k].set_xlim([0,100])
-        axes[k].set_ylabel("Temperature", fontsize=fs)
-        axes[k].tick_params(axis='y', labelsize=fs)
-
-    def animate(k):
-        for i in range(num):
-            lines[i].set_ydata(diff_obj[i].T[1, :])
-            axes[i].set_title(f"dt: {np.around(diff_obj[i].m.dt,2)} - Timestep: {k}", fontsize=16)
-            diff_obj[i].march()
-
-        return lines
-
-    def init():
-        for i in range(num):
-            diff_obj[i].set_IC()
-
-            lines[i].set_ydata(diff_obj[i].T[1, :])
-            axes[i].set_title(f"dt: {np.around(diff_obj[i].m.dt,2)} - Timestep: 0", fontsize=16)
-        return lines
-
-    # calling the animation function
-    anim = animation.FuncAnimation(fig, animate,
-                                   init_func=init,
-                                   frames=frames,
-                                   interval=interval,
-                                   blit=False)
-    return anim
