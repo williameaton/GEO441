@@ -1,10 +1,11 @@
 import numpy as np
 from copy import copy
 #from initial_conditions import set_IC
+from general_funcs import calc_fft_grad
 
 
 class vel_stress_form():
-    def __init__(self, model, BC_left, BC_right, plot, label):
+    def __init__(self, model, BC_left, BC_right, solver, label, plot="v"):
 
         # Boundary conditions
         self.m = model
@@ -28,13 +29,19 @@ class vel_stress_form():
         self.plot = self.set_plot_type(self.plot_type)  # Initialise plot variable
         self.label = label                              # Legend label
 
+        self.step_type = solver
+
 
     def march(self):
-        for i in range(1, self.m.dim-1):
-            self.step_v(i)
-            self.step_T(i)
 
-        self.apply_boundary_conditions()
+        # Calculate spatial gradients:
+        gradient = self.calc_space_gradient(arr=self.T)
+        self.step_v(gradient)
+        gradient = self.calc_space_gradient(arr=self.v)
+        self.step_T(gradient)
+
+        if self.step_type=="finite_difference":
+            self.apply_boundary_conditions()
 
         # Update data arrays
         # Roll back arrays so that U[1,:] --> U[0,:] and U[2,:] --> U[1,:]
@@ -43,6 +50,10 @@ class vel_stress_form():
 
         # Update plotter - i.e. ensure plotter has correct data:
         self.plot = self.set_plot_type(self.plot_type)
+
+
+
+
 
 
     def set_initial_conditions(self):
@@ -69,12 +80,32 @@ class vel_stress_form():
         return u, v, T
 
 
+    def calc_space_gradient(self, arr):
+        if self.step_type == "pseudospectral":
+            grad = calc_fft_grad(arr[1, :], dx=self.dx)*2
+            grad = grad
+        elif self.step_type == "finite_difference":
+            grad = (arr[1, 2:] - arr[1, :-2]) / self.dx
 
-    def step_v(self, k):
-        self.v[2, k] = (self.dt / (self.rho[k] * self.dx)) * (self.T[1, k + 1] - self.T[1, k-1]) + self.v[0, k]
+        else:
+            raise ValueError("Step type not supported - must be finite_difference or pseudospectral")
 
-    def step_T(self, k):
-        self.T[2, k] = (self.K[k] * self.dt / self.dx) * (self.v[1, k+1] - self.v[1, k-1]) + self.T[0, k]
+        return grad
+
+
+    def step_v(self, gradient):
+        if self.step_type == "pseudospectral":
+            self.v[2, :] = (self.dt/self.rho[:])*gradient + self.v[0,:]
+
+        else:
+            self.v[2, 1:-1] = (self.dt/self.rho[1:-1])*gradient + self.v[0, 1:-1]
+
+
+    def step_T(self, gradient):
+        if self.step_type == "pseudospectral":
+            self.T[2, :] = (self.K[:] * self.dt) * gradient + self.T[0, :]
+        else:
+            self.T[2, 1:-1] = (self.K[1:-1] * self.dt)*gradient + self.T[0, 1:-1]
 
 
     def impliment_BC_left(self, zero, adjacent):
@@ -115,3 +146,8 @@ class vel_stress_form():
             return self.T
         else:
             raise ValueError("Must be v or T")
+
+
+
+
+

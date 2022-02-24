@@ -9,9 +9,8 @@ class Model():
         self.K = K                       # Material property
         self.rho = rho                   # Density
         self.Nt = Nt                     # Number of timesteps
-
-        if dt != None:
-            self.dt = dt
-        else:
+        if dt==None:
             self.dt = dx/np.max(c)           # Timestep
+        else:
+            self.dt = dt
         self.dim = len(self.x)           # Dimension of X

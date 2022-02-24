@@ -96,3 +96,6 @@ class displacement_form():
             self.u[:, -1] = 0
         else:
             self.u[:, -1] = self.u[:, -2]
+
+
+
