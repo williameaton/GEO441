@@ -7,14 +7,24 @@ sys.path.append('/Users/eaton/Documents/Princeton/GEO441/Homework1')
 from model import Model
 from waveWE import create_wave
 from propagate import propagate
-from general_funcs import homo_ofsize, save_anim_mp4
+from general_funcs import homo_ofsize, save_anim_mp4, hetero_ofsize
+
+# Simulation:
+simulation = "heterogenous"
 
 
 # Create initial homogenous model:
-dx = 0.1
-x = np.arange(30, 70+dx, dx)
+dx = 0.2
+x = np.arange(0, 100+dx, dx)
 rho = homo_ofsize(1, x)
-K = homo_ofsize(1,x)
+
+if simulation=="homogenous":
+    K = homo_ofsize(1,x)
+elif simulation=="heterogenous":
+    K = hetero_ofsize(bounds=[0, 60, 100], vals=[1,4], x=x)
+else:
+    raise ValueError("Simulation type not correct.")
+
 c = K/rho
 Nt = 1000
 
@@ -23,11 +33,12 @@ BC = "neumann"
 
 
 w  = create_wave(type="vel-stress",  model=m,  BC_left=BC, BC_right=BC, solver="pseudospectral", label="Pseudospectral")
-w2  = create_wave(type="vel-stress",  model=m,  BC_left=BC, BC_right="dirichlet", solver="finite_difference", label="Finite Difference")
+w2  = create_wave(type="vel-stress",  model=m,  BC_left=BC, BC_right=BC, solver="finite_difference", label="Finite Difference")
 
 # Collect all the waves into an array for propagation
-waves = [w, w2]
+waves = [w2, w]
 
 ani = propagate(waves, m,  fig_title=BC, figsize=(12,8), ylims=[-0.3, 0.3])
 
-save_anim_mp4(ani, "./videos/homogenous.mp4", fps=50)
+#plt.show()
+save_anim_mp4(ani, f"./videos/{simulation}.mp4", fps=50)
