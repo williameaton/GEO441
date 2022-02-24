@@ -1,4 +1,4 @@
-from wave import create_wave
+from waveWE import create_wave
 from model import Model
 from propagate import propagate
 from gen_x import gen_x
@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 # ______________________________________________________________________________________________________________________
 # The script below will produce one simulation for each 1(a) Dirichlet boundary conditions and (b) Neumann boundary
 # conditions. The displacement, velocity and stress are all plotted.
+
 
 # Define simulation parameters:
 dx       = 0.1          # Grid spacing
@@ -34,16 +35,13 @@ for BC in ["dirichlet", "neumann"]:
     w3 = create_wave(type="vel-stress",    model=m,    BC_left=BC, BC_right=BC, plot="T", label="Stress")
 
     # Collect all the waves into an array for propagation
-    waves = [w, w2, w3]
+waves = [w, w2, w3]
 
+w2.march()
 
-    # Alternatively you can uncomment this code block and comment out the stuff below to view the animations one at a time
-    ani.append(propagate(waves, m,  fig_title=BC))
+ani.append(propagate(waves, m,  fig_title=BC))
 plt.show()
 
-    ### Uncomment this:
-    #propagate(waves, m)
-    #plt.show()
 
 
 
