@@ -1,5 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib.animation as animation
+import matplotlib.pyplot as plt
+
 
 def calc_fft_grad(f, dx):
     # Take gradient and calculate freq/wavenumbers (fk):
@@ -12,7 +15,6 @@ def calc_fft_grad(f, dx):
 
 def normalise(x):
     return x/np.amax(np.abs(x))
-
 
 
 def homo_ofsize(val, ofsize):
@@ -29,3 +31,12 @@ def hetero_ofsize(bounds, vals, x):
         mask = [x>=bounds[i]]
         out[mask] = vals[i]
     return out
+
+
+
+def save_anim_mp4(anim, fname):
+    # Animate and save:
+    writervideo = animation.FFMpegWriter(fps=5)
+    print("Saving video:")
+    anim.save(fname, writer=writervideo)
+    print(f"Written to {fname}")
