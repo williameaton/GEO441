@@ -3,5 +3,8 @@
 *.xml
 *.idea
 *.pyc*
+*__pycache*
 *cpython*
 *.out
+*.ipynb_checkpoints*
+*.pdf

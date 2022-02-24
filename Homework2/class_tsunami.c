@@ -29,7 +29,7 @@ float *f1, *f2;
 /*WE*/
 int hetero = 1;
 int smooth = 0;
-int	ord	= 4;
+int	ord	= 2;
 
 
 
@@ -37,9 +37,9 @@ int	nx	=1000;
 int	ny	=800;
 int	nt	=10000;
 float	h	=10.0;
-float	dt	=10.0;
+float	dt	=1.0;
 char	vmodel[]	="bathymetry.in";
-char	output[]	="4heterorough.out";
+char	output[]	="2heterorough.out";
 int	itprint	=100;   /* time steps between print messages */
 int	itslice	=100;  /* time steps between slice outputs */
 float	latref	=-40.0;

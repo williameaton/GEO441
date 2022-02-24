@@ -1,19 +1,20 @@
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import numpy as np
-def propagate(waves, m, fig_title=""):
+def propagate(waves, m, fig_title="", figsize=(8,8), ylims=None):
     # This whole function basically animates the plot by marching through timesteps
 
     # Create figure
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=figsize)
     fig.suptitle(fig_title)
-    ax.set_ylim(-1, 1)
+    if ylims != None:
+        ax.set_ylim(ylims[0], ylims[1])
     lines = []
 
     # Produce initial plots to initialise each 2D Line object:
     leg_list = []
     for w in waves:
-        l, = ax.plot(m.x, w.plot[1, :])
+        l, = ax.plot(m.x, w.plot[1, :], linewidth=2)
         lines.append(l)
         leg_list.append(w.label)
 

@@ -34,9 +34,9 @@ def hetero_ofsize(bounds, vals, x):
 
 
 
-def save_anim_mp4(anim, fname):
+def save_anim_mp4(anim, fname, fps):
     # Animate and save:
-    writervideo = animation.FFMpegWriter(fps=5)
+    writervideo = animation.FFMpegWriter(fps=fps)
     print("Saving video:")
     anim.save(fname, writer=writervideo)
     print(f"Written to {fname}")

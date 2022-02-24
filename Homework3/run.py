@@ -42,7 +42,7 @@ for i in range(num):
 ani = diff_animate(lines=ls, diff_obj=ds, fig=fig, axes=ax, interval=300, frames=100)
 
 
-plt.close()
+plt.show()
 
 """
 # Animate and save:
@@ -53,4 +53,4 @@ ani.save(f, writer=writervideo)
 print(f"Written to {f}")
 """
 
-print("For convenience I have already run and saved these movies. Alternatively if you want to view them interactively you can just run plt.show(). You will also need to uncomment '%matplotlib notebook' with the imports to view the animation in Jupyter, and the plt.close() that I use to supress the plot.")
+#print("For convenience I have already run and saved these movies. Alternatively if you want to view them interactively you can just run plt.show(). You will also need to uncomment '%matplotlib notebook' with the imports to view the animation in Jupyter, and the plt.close() that I use to supress the plot.")
