@@ -1,7 +1,7 @@
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
-sys.path.append('/Users/eaton/Documents/Princeton/GEO441/Homework1')
+sys.path.append('/home/we3822/Documents/princeton/GEO441/GEO441/Homework1')
 from model import Model
 from waveWE import create_wave
 from propagate import propagate
