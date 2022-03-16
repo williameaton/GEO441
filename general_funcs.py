@@ -40,3 +40,11 @@ def save_anim_mp4(anim, fname, fps):
     print("Saving video:")
     anim.save(fname, writer=writervideo)
     print(f"Written to {fname}")
+
+
+
+
+x = np.linspace(0, np.pi*2, 100)
+y = np.cos(x)
+
+calc_fft_grad(y, dx=x[1]-x[0])

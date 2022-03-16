@@ -6,5 +6,6 @@
 *__pycache*
 *cpython*
 *.out
+*.json
 *.ipynb_checkpoints*
 *.pdf
