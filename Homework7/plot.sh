@@ -1,11 +1,12 @@
 #!/bin/bash 
 
+clean 
 make clean 
 make 
 
-# Remove any time arrays in the snapshots: 
-rm snapshots/time
+
 
 ./xdiffusion
 
+echo "Finished calculations. Starting plots:"
 python3 plot.py
