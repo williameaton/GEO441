@@ -81,6 +81,13 @@ double precision dtdx,flux,templ,temp(NGLL)
 ! movie
 character(len=50) moviefile
 
+! plot? 
+character(60) :: plot  
+
+
+! CMD for plotting? 
+call get_command_argument(1, plot)
+
 
 ! Make output directory
 print*, "Removing existing directory:   ", trim(outdir)
@@ -241,6 +248,13 @@ open(unit=91,file= trim(outdir)//"meta", status='unknown', position="append")
     write(91,*) ctr 
     write(91,*) DT 
     close(91)
+
+
+! Run python plotter:
+if (plot=="plot") then 
+  print *, "Finished calculations. Starting plots:"
+  call system("python3 plot.py "//trim(outdir))
+endif 
 
 end program diffusion
 !======================================================================

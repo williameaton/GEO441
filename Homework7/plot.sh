@@ -4,9 +4,6 @@ clean
 make clean 
 make 
 
+# Plot argument calls python script
+./xdiffusion plot 
 
-
-./xdiffusion
-
-echo "Finished calculations. Starting plots:"
-python3 plot.py

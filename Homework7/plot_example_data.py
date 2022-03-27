@@ -11,7 +11,7 @@ for dir in names:
     plotter_list.append(plotter(f'example_data/{dir}'))
 
 
-# Create figure and set initial plot
+#  Create figure and set initial plot
 fig, ax = plt.subplots(figsize=(8,7))
 for p in plotter_list:
     p.plot_initial_setup(ax)
@@ -35,4 +35,6 @@ anim = animation.FuncAnimation(fig, animate,
                             blit = False)
 ax.legend(names)
 
-plt.show()
+f = r"thermal_profiles.mp4"
+writervideo = animation.FFMpegWriter(fps=20)
+anim.save(f, writer=writervideo)
