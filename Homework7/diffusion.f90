@@ -5,12 +5,13 @@ include "constants.h"
 
 ! number of timesteps
 integer, parameter :: NSTEP = 4000000
+integer, parameter :: slice_interval = 20000
  
 ! time step in seconds
 double precision, parameter :: DT = 10000000. ! s
  
 ! logicals: 
-logical, parameter :: hetero_kappa = .true. 
+logical, parameter :: hetero_kappa = .false. 
 logical, parameter :: hetero_spacing = .false. 
 
 character(60) :: outdir   = "hetero_k_homo_sp/"
@@ -89,6 +90,8 @@ character(60) :: plot
 call get_command_argument(1, plot)
 
 
+!++++++++++++++++++++++++++++++++++++++++++++++++++
+! Delete/re-create directories for slice outputs:  
 ! Make output directory
 print*, "Removing existing directory:   ", trim(outdir)
 
@@ -104,14 +107,14 @@ print *, "Calculating matrices..."
 
 call define_derivative_matrix(xigll,wgll,hprime)
 
+print *, hprime
 
 ! set up local to global numbering
 iglob = 1
 do ispec = 1,NSPEC
   do i = 1,NGLL
-  if(i>1)iglob = iglob+1
-    ibool(i,ispec) = iglob
-
+    if(i>1)iglob = iglob+1
+      ibool(i,ispec) = iglob
   enddo
 enddo
 
@@ -121,12 +124,12 @@ if (hetero_spacing) then
     ! non evenly-spaced: 
     do ispec = 1, NSPEC 
       if (ispec <4) then 
-        x1(ispec) = dble(ispec-1) *500.
+        x1(ispec) = dble(ispec-1)*500.
       x2(ispec) =dble(ispec)*500. 
       else 
         val = 1500.0/9.0
         x1(ispec) = ((dble(ispec-1)-3.0)*val ) + 1500.
-        x2(ispec) = ((dble(ispec)-3.0)*val ) + 1500.
+        x2(ispec) = ((dble(ispec)-3.0)*val )   + 1500.
       endif 
     enddo 
 else 
@@ -156,9 +159,8 @@ enddo
 ! get the global grid points & calculate mass matrix 
 do ispec = 1,NSPEC
   do a = 1,NGLL
-    ! Determine global x values
-    iglob = ibool(a,ispec)
-    x(iglob) = 0.5*(1.-xigll(a))*x1(ispec)+0.5*(1.+xigll(a))*x2(ispec)
+    iglob = ibool(a,ispec)                                                ! Determine global x values
+    x(iglob) = 0.5*(1.-xigll(a))*x1(ispec)+0.5*(1.+xigll(a))*x2(ispec)    
 
     ! Apply heterogeneity of kappa 
     if (hetero_kappa) then 
@@ -209,7 +211,7 @@ do itime = 1, NSTEP
             enddo 
           
             j = ibool(a,ispec)
-            RHS(j) = RHS(j)   -(stiffness * temperature(ibool(b,ispec)))
+            RHS(j) = RHS(j) - (stiffness * temperature(ibool(b,ispec)))
         
           enddo
         enddo
@@ -225,8 +227,7 @@ do itime = 1, NSTEP
 
 
   ! 4) write out snapshots
-    
-    if(mod(itime-1,20000) == 0) then
+    if(mod(itime-1, slice_interval) == 0) then
       ! WE edit - make a file to store the timestaps outputted
       open(unit=90,file=trim(outdir)//"time", status='unknown', position="append")
       write(90,*) itime
@@ -247,6 +248,7 @@ open(unit=91,file= trim(outdir)//"meta", status='unknown', position="append")
     write(91,*) fnameout
     write(91,*) ctr 
     write(91,*) DT 
+    write(91,*) slice_interval 
     close(91)
 
 
@@ -257,4 +259,4 @@ if (plot=="plot") then
 endif 
 
 end program diffusion
-!======================================================================
+! =================================================================================================

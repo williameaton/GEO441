@@ -13,6 +13,8 @@ class plotter():
         self.name = Lines[0].strip()
         self.no_snapshots = int(Lines[1])
         self.timestep = float(Lines[2])
+        self.timestep_interval = int(Lines[3])
+
 
 
     def load_data(self):
@@ -49,6 +51,6 @@ class plotter():
 
 
 
-def secs_to_a(secs):
+def secs_to_ka(secs):
     # Convert seconds to yrs:
-    return secs/(60*60*24*365.25)
+    return secs/(3.154e+11)
