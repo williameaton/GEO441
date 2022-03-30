@@ -12,8 +12,12 @@ class plotter():
         Lines = open(f'{self.dir}/meta', 'r').readlines()
         self.name = Lines[0].strip()
         self.no_snapshots = int(Lines[1])
+
         self.timestep = float(Lines[2])
         self.timestep_interval = int(Lines[3])
+
+
+
 
 
 
@@ -53,4 +57,4 @@ class plotter():
 
 def secs_to_ka(secs):
     # Convert seconds to yrs:
-    return secs/(3.154e+11)
+    return secs/(365.25*60*60*24*1000)

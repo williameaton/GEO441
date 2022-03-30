@@ -25,7 +25,7 @@ def init():
 def animate(i):
     for p in plotter_list:
         p.l.set_ydata(p.data[i,:,1])
-    ax.set_title(f"Time: {np.around(secs_to_ka(i*p.timestep*p.timestep_interval), 2)} Ka")
+    ax.set_title(f"Time: {np.around(i*secs_to_ka(p.timestep*p.timestep_interval), 2)} Ka")
 
 
 anim = animation.FuncAnimation(fig, animate,

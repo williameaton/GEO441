@@ -16,13 +16,13 @@ def init():
 
 def animate(i):
     p.l.set_ydata(p.data[i,:,1])
-    ax.set_title(f"Time: {np.around(secs_to_ka(i*p.timestep*p.timestep_interval), 2)} Ka")
+    ax.set_title(f"Time: {np.around(i*secs_to_ka(p.timestep*p.timestep_interval), 2)} Ka")
 
 
 anim = animation.FuncAnimation(fig, animate,
                             init_func = init,
                             frames = p.no_snapshots,
-                            interval = 50,
+                            interval = 150,
                             blit = False)
 
 plt.show()

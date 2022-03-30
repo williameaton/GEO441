@@ -4,17 +4,17 @@ implicit none
 include "constants.h"
 
 ! number of timesteps
-integer, parameter :: NSTEP = 4000000
-integer, parameter :: slice_interval = 20000
+integer, parameter :: NSTEP = 30000
+integer, parameter :: slice_interval = 1000
  
 ! time step in seconds
-double precision, parameter :: DT = 10000000. ! s
+double precision, parameter :: DT = 100000000. ! s
  
 ! logicals: 
 logical, parameter :: hetero_kappa = .false. 
 logical, parameter :: hetero_spacing = .false. 
 
-character(60) :: outdir   = "hetero_k_homo_sp/"
+character(60) :: outdir   = "terry/"
 character(60) :: fnameout = "t"
 character(60) makedirectory, removedir
 
@@ -46,7 +46,7 @@ double precision, dimension(NSPEC) :: x1,x2
 double precision, dimension(NGLOB) :: x
 
 ! material properties
-double precision, dimension(NGLL,NSPEC) :: rho,heat_capacity,thermal_conductivity
+double precision, dimension(NGLL,NSPEC) :: rho,heat_capacity, thermal_conductivity
 
 ! Jacobian `matrix' and Jacobian
 double precision, dimension(NGLL,NSPEC) :: dxidx,jacobian
@@ -107,7 +107,6 @@ print *, "Calculating matrices..."
 
 call define_derivative_matrix(xigll,wgll,hprime)
 
-print *, hprime
 
 ! set up local to global numbering
 iglob = 1
@@ -155,7 +154,7 @@ do ispec = 1,NSPEC
 enddo
 
 
-
+mass_global = 0.
 ! get the global grid points & calculate mass matrix 
 do ispec = 1,NSPEC
   do a = 1,NGLL
@@ -170,14 +169,15 @@ do ispec = 1,NSPEC
     endif
 
     ! Mass matrix (vector) calculation - do in this loop for efficiency :
-    do b = 1, NGLL
-      mass_global(iglob) = mass_global(iglob) + wgll(b)*rho(b,ispec)*heat_capacity(b,ispec)*jacobian(b,ispec)
-    enddo
+    mass_global(iglob) = mass_global(iglob) + wgll(a)*rho(a,ispec)*heat_capacity(a,ispec)*jacobian(a,ispec)
 
   enddo
 enddo
 
+print *, mass_global
 
+
+print* , thermal_conductivity
 ! Set initial conditions: 
 temperature(:) = 0.
 temperature(1) = 10.  
@@ -218,12 +218,16 @@ do itime = 1, NSTEP
     enddo 
 
   ! 2.2) Estimate new dtemp_dt 
-  do i = 1,NGLOB
-    dtemperature_dt(i) = RHS(i)/mass_global(i)
-  enddo 
+  dtemperature_dt(:) = RHS(:)/mass_global(:)
 
   ! 3) CORRECTOR STEP: 
   temperature = temperature + 0.5*DT*dtemperature_dt
+
+    ! 1.2) ENFORCE BOUNDARY CONDITIONS 
+  temperature(1) = 10.0
+  temperature(NGLOB) = 0.0
+
+
 
 
   ! 4) write out snapshots
