@@ -17,8 +17,11 @@ character(60) :: fnameout = "w"
 character(60) makedirectory, removedir
 
 ! boundary conditions: if not true then uses neumann
-logical, parameter :: dirichlet_BC = .true.
+logical, parameter :: dirichlet_BC = .false.
+logical, parameter :: output_vid = .false.     ! If yes then will output video mp4
+character(60) :: video_name   = "neumann"
  
+
 ! model parameters  (SI)
 double precision, parameter :: RHO     = 1 ! kg/m^3
 double precision, parameter :: MU      = 1 ! 
@@ -225,7 +228,12 @@ open(unit=91,file= trim(outdir)//"meta", status='unknown', position="append")
 ! Run python plotter:
 if (plot=="plot") then 
   print *, "Finished calculations. Starting plots:"
-  call system("python3 plot.py "//trim(outdir))
+  if (output_vid) then
+    call system("python3 plot.py "//trim(outdir) // " " // trim(video_name) ) 
+  else 
+    call system("python3 plot.py "//trim(outdir) // " N0_VIDE0" ) 
+  endif 
+
 endif 
 
 end program wave

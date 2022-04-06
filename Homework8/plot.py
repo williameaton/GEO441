@@ -5,6 +5,7 @@ import sys
 from plot_funcs import plotter, secs_to_ka
 
 directory = sys.argv[1]
+video_name = sys.argv[2]
 
 p = plotter(directory)
 
@@ -23,9 +24,18 @@ def animate(i):
 anim = animation.FuncAnimation(fig, animate,
                             init_func = init,
                             frames = p.no_snapshots,
-                            interval = 10,
+                            interval = 2,
                             blit = False)
 
-plt.show()
+
+if video_name != "N0_VIDE0":  
+    vid_file = f"{video_name}.mp4"
+    print(f"Saving animation as: {vid_file}")
+    writervideo = animation.FFMpegWriter(fps=150) 
+    anim.save(vid_file, writer=writervideo)   
+    print("Saved.") 
+
+else: 
+    plt.show()
 
 
