@@ -175,7 +175,7 @@ do itime = 1, NSTEP
     
           do g = 1, NGLL
             ! Loop through summation for quadrature - g is gamma in equations 
-            stiffness = stiffness + wgll(g)*rho_matrix(g,ispec)*dxidx(g,ispec)*hprime(a, g)*hprime(b, g)
+            stiffness = stiffness + wgll(g)*mu_matrix(g,ispec)*dxidx(g,ispec)*hprime(a, g)*hprime(b, g)
           enddo 
         
           j = ibool(a,ispec)
