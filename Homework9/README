@@ -1,0 +1,22 @@
+Whats in the repo? - edited by WE 
+==================================
+The main report/results are in ```report.ipynb```. 
+
+Directory ```visualisation``` has a couple of scripts/subdirectories: 
+1) compare_seismograms [subdir]: holds some data from simulations and  
+     the pngs in the report
+2) plot_snapshots.py: code to produce animations in report. Requires 
+     loading data from a folder called OUTPUT_FILES/reduced
+3) plot_traces.py: code to produce the pngs shown in the report 
+4) PSV.mp4: Video in report
+5) reduce_data_redundancy: script that takes the output snapshots in 
+     OUTPUT_FILES from simulation and outputs an edited verion of the
+     data in OUTPUT_FILES/reduced/
+     The reason for this is that each snapshot holds the x,z coordinates
+     and these are the same in each file, meaning a lot of unneeded data. 
+     reduce_data_redundancy takes the snapshots and removes the coords, 
+     storing them in a seperate file called coords, within the reduced
+     directory. 
+     This needs to be run before running the animation script. 
+6) SH.mp4: Video in report
+

@@ -2,15 +2,18 @@
 # So plan is to have a script that strips out those columns:
 import numpy as np
 
+snapshot_sep = 25
+no_snapshots = 10000//snapshot_sep
+
 # Data directories:
 dir = "../OUTPUT_FILES/"
 new_dir = f"{dir}/reduced/"
 
 # _____________________________________________________________________________________________________________________
 # LOADING SNAPSHOTS:
-for i in range(40):
+for i in range(no_snapshots):
     # Ensure snapshot number has sufficient 0's in front:
-    snapshot_no = str((i+1)*250)
+    snapshot_no = str((i+1)*snapshot_sep)
     while len(snapshot_no) <6:
         snapshot_no  = "0" + snapshot_no
 
