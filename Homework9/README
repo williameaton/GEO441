@@ -1,8 +1,8 @@
 Whats in the repo? - edited by WE 
 ==================================
-The main report/results are in ```report.ipynb```. 
+The main report/results are in report.ipynb. 
 
-Directory ```visualisation``` has a couple of scripts/subdirectories: 
+Directory visualisation has a couple of scripts/subdirectories: 
 1) compare_seismograms [subdir]: holds some data from simulations and  
      the pngs in the report
 2) plot_snapshots.py: code to produce animations in report. Requires 
